@@ -3,10 +3,13 @@ import os
 import zipfile
 from playwright.async_api import async_playwright
 
-START_ID = 5085
-END_ID = 5100  # teste curto
+# =========================
+# CONFIGURAÇÃO DO BLOCO
+# =========================
+START_ID = 0
+END_ID = 499  # ajuste para próximos blocos depois
 SAVE_FOLDER = "pdfs_rpe_2024"
-ZIP_NAME = "RPE_2024_TESTE.zip"
+ZIP_NAME = f"RPE_2024_{START_ID}_{END_ID}.zip"
 
 BASE_URL = "https://sistema-registropublicodeemissoesapi.fgv.br/GenerateReport/GenerateInventoryReport/{}/18/true"
 
@@ -37,15 +40,24 @@ async def main():
                 download_count += 1
                 print(f"✔ PDF salvo {formatted_id}")
 
-            except Exception as e:
-                print(f"✖ Falhou {formatted_id}")
+            except Exception:
+                print(f"✖ Não encontrado {formatted_id}")
+
+            # Pausa para evitar bloqueio do servidor
+            await asyncio.sleep(1)
 
         await browser.close()
 
+    # Criar ZIP se houver PDFs
     if download_count > 0:
         with zipfile.ZipFile(ZIP_NAME, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file in os.listdir(SAVE_FOLDER):
                 zipf.write(os.path.join(SAVE_FOLDER, file), file)
+
+        print("===================================")
+        print(f"ZIP criado: {ZIP_NAME}")
+    else:
+        print("Nenhum PDF encontrado neste bloco.")
 
     print("===================================")
     print(f"Total de PDFs baixados: {download_count}")
