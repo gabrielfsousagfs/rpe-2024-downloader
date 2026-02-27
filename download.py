@@ -3,8 +3,8 @@ import os
 import zipfile
 from playwright.async_api import async_playwright
 
-START_ID = 5000
-END_ID = 5020  # TESTE CURTO PRIMEIRO
+START_ID = 5090
+END_ID = 5110  # TESTE CURTO PRIMEIRO
 SAVE_FOLDER = "pdfs_rpe_2024"
 ZIP_NAME = "RPE_2024_TESTE.zip"
 
