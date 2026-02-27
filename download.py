@@ -4,7 +4,7 @@ import zipfile
 from playwright.async_api import async_playwright
 
 START_ID = 0000
-END_ID = 0499  # teste curto
+END_ID = 499  # teste curto
 SAVE_FOLDER = "pdfs_rpe_2024"
 ZIP_NAME = "RPE_2024_0000_0499.zip"
 
