@@ -7,7 +7,7 @@ from playwright.async_api import async_playwright
 # CONFIGURAÇÃO DO BLOCO
 # =========================
 START_ID = 0
-END_ID = 499  # ajuste para próximos blocos depois
+END_ID = 999  # ajuste conforme quiser expandir
 SAVE_FOLDER = "pdfs_rpe_2024"
 ZIP_NAME = f"RPE_2024_{START_ID}_{END_ID}.zip"
 
@@ -43,18 +43,17 @@ async def main():
             except Exception:
                 print(f"✖ Não encontrado {formatted_id}")
 
-            # Pausa para evitar bloqueio do servidor
-            await asyncio.sleep(1)
+            # pausa para evitar bloqueio
+            await asyncio.sleep(0.8)
 
         await browser.close()
 
-    # Criar ZIP se houver PDFs
+    # Criar ZIP apenas se houver PDFs
     if download_count > 0:
         with zipfile.ZipFile(ZIP_NAME, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file in os.listdir(SAVE_FOLDER):
                 zipf.write(os.path.join(SAVE_FOLDER, file), file)
 
-        print("===================================")
         print(f"ZIP criado: {ZIP_NAME}")
     else:
         print("Nenhum PDF encontrado neste bloco.")
