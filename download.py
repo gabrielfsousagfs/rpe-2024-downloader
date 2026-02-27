@@ -16,10 +16,16 @@ BASE_URL = "https://sistema-registropublicodeemissoesapi.fgv.br/GenerateReport/G
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 
 async def main():
+    print("Script iniciou.")
     download_count = 0
 
+    print("Iniciando Playwright...")
+
     async with async_playwright() as p:
+        print("Playwright iniciado.")
+        print("Abrindo Chromium...")
         browser = await p.chromium.launch(headless=True)
+        print("Chromium aberto.")
         context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
 
