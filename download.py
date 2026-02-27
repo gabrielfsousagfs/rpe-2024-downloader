@@ -3,8 +3,8 @@ import os
 import zipfile
 from playwright.async_api import async_playwright
 
-START_ID = 5090
-END_ID = 5110  # TESTE CURTO PRIMEIRO
+START_ID = 5085
+END_ID = 5100  # teste curto
 SAVE_FOLDER = "pdfs_rpe_2024"
 ZIP_NAME = "RPE_2024_TESTE.zip"
 
@@ -17,7 +17,7 @@ async def main():
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
+        context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
 
         for participant_id in range(START_ID, END_ID + 1):
@@ -26,27 +26,19 @@ async def main():
 
             try:
                 print(f"Tentando {formatted_id}")
-                response = await page.goto(url, timeout=10000)
 
-                if response and response.status == 200:
-                    content_type = response.headers.get("content-type", "")
-                    
-                    if "application/pdf" in content_type:
-                        pdf_bytes = await response.body()
-                        path = os.path.join(SAVE_FOLDER, f"{formatted_id}.pdf")
-                        
-                        with open(path, "wb") as f:
-                            f.write(pdf_bytes)
+                async with page.expect_download(timeout=10000) as download_info:
+                    await page.goto(url)
 
-                        download_count += 1
-                        print(f"✔ PDF salvo {formatted_id}")
-                    else:
-                        print(f"✖ {formatted_id} não retornou PDF ({content_type})")
-                else:
-                    print(f"✖ {formatted_id} status inválido")
+                download = await download_info.value
+                path = os.path.join(SAVE_FOLDER, f"{formatted_id}.pdf")
+                await download.save_as(path)
+
+                download_count += 1
+                print(f"✔ PDF salvo {formatted_id}")
 
             except Exception as e:
-                print(f"Erro em {formatted_id}: {e}")
+                print(f"✖ Falhou {formatted_id}")
 
         await browser.close()
 
