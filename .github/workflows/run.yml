@@ -7,11 +7,19 @@ jobs:
   download:
     runs-on: ubuntu-latest
 
-    container:
-      image: mcr.microsoft.com/playwright/python:v1.42.0-jammy
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install --with-deps
 
       - name: Run script
         run: python download.py
