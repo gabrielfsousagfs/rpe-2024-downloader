@@ -8,13 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: mcr.microsoft.com/playwright/python:v1.42.0-jammy
+      image: mcr.microsoft.com/playwright/python:v1.58.0-jammy
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Playwright Python package
-        run: pip install playwright
+      - name: Install Playwright Python package (matching container)
+        run: pip install playwright==1.58.0
 
       - name: Run download script
         run: python download.py
