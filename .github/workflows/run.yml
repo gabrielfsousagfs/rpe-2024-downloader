@@ -2,6 +2,15 @@ name: Baixar RPE 2024
 
 on:
   workflow_dispatch:
+    inputs:
+      start_id:
+        description: "ID inicial da varredura"
+        required: false
+        default: "0"
+      end_id:
+        description: "ID final da varredura"
+        required: false
+        default: "499"
 
 jobs:
   download:
@@ -14,12 +23,37 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Playwright + Dependencies
+      - name: Install Python dependencies
         run: |
-          pip install playwright
-          playwright install --with-deps chromium
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+
+      - name: Install Playwright browser
+        run: |
+          python -m playwright install --with-deps chromium
+
+      - name: Diagnose Playwright runtime
+        run: |
+          python -m playwright --version
+          python - <<'PY'
+          import asyncio
+          from playwright.async_api import async_playwright
+
+          async def main():
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(headless=True)
+                  page = await browser.new_page()
+                  await page.goto("https://example.com", wait_until="domcontentloaded")
+                  print("Playwright OK:", await page.title())
+                  await browser.close()
+
+          asyncio.run(main())
+          PY
 
       - name: Run download script
+        env:
+          START_ID: ${{ inputs.start_id }}
+          END_ID: ${{ inputs.end_id }}
         run: python download.py
 
       - name: Upload ZIPs
