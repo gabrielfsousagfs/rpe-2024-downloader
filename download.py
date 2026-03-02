@@ -10,13 +10,23 @@ END_ID = int(os.getenv("END_ID", "499"))
 SAVE_FOLDER = "pdfs_rpe_2024"
 ZIP_NAME = f"RPE_2024_{START_ID}_{END_ID}.zip"
 
+# Tunables for performance / CI stability
+DOWNLOAD_TIMEOUT_MS = int(os.getenv("DOWNLOAD_TIMEOUT_MS", "8000"))
+GOTO_TIMEOUT_MS = int(os.getenv("GOTO_TIMEOUT_MS", "12000"))
+REQUEST_DELAY_MS = int(os.getenv("REQUEST_DELAY_MS", "100"))
+
 BASE_URL = "https://sistema-registropublicodeemissoesapi.fgv.br/GenerateReport/GenerateInventoryReport/{}/18/true"
 
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 
+
 async def main():
     print("Script iniciado.", flush=True)
     print(f"Faixa configurada: {START_ID} até {END_ID}", flush=True)
+    print(
+        f"Config: DOWNLOAD_TIMEOUT_MS={DOWNLOAD_TIMEOUT_MS}, GOTO_TIMEOUT_MS={GOTO_TIMEOUT_MS}, REQUEST_DELAY_MS={REQUEST_DELAY_MS}",
+        flush=True,
+    )
     download_count = 0
 
     try:
@@ -32,8 +42,13 @@ async def main():
                 try:
                     print(f"Tentando {formatted_id}", flush=True)
 
-                    async with page.expect_download(timeout=15000) as download_info:
-                        await page.goto(url, wait_until="commit", timeout=30000)
+                    async with page.expect_download(timeout=DOWNLOAD_TIMEOUT_MS) as download_info:
+                        try:
+                            await page.goto(url, wait_until="commit", timeout=GOTO_TIMEOUT_MS)
+                        except PlaywrightError as exc:
+                            # Expected for endpoints that immediately return a file download.
+                            if "Download is starting" not in str(exc):
+                                raise
 
                     download = await download_info.value
                     path = os.path.join(SAVE_FOLDER, f"{formatted_id}.pdf")
@@ -47,22 +62,27 @@ async def main():
                 except Exception as exc:
                     print(f"✖ Falha em {formatted_id}: {exc}", flush=True)
 
-                await asyncio.sleep(1)
+                if REQUEST_DELAY_MS > 0:
+                    await asyncio.sleep(REQUEST_DELAY_MS / 1000)
 
             await browser.close()
     except PlaywrightError as exc:
         print("Falha ao inicializar Playwright/Chromium.", flush=True)
         print(f"Detalhes: {exc}", flush=True)
-        print("Sugestão: garanta que o workflow execute `python -m playwright install --with-deps chromium` antes do script.", flush=True)
+        print(
+            "Sugestão: garanta que o workflow execute `python -m playwright install --with-deps chromium` antes do script.",
+            flush=True,
+        )
         raise
 
     if download_count > 0:
-        with zipfile.ZipFile(ZIP_NAME, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(ZIP_NAME, "w", zipfile.ZIP_DEFLATED) as zipf:
             for file in os.listdir(SAVE_FOLDER):
                 zipf.write(os.path.join(SAVE_FOLDER, file), file)
 
         print(f"ZIP criado: {ZIP_NAME}", flush=True)
 
     print(f"Total de PDFs baixados: {download_count}", flush=True)
+
 
 asyncio.run(main())

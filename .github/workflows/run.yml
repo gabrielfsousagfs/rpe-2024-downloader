@@ -11,6 +11,18 @@ on:
         description: "ID final da varredura"
         required: false
         default: "499"
+      download_timeout_ms:
+        description: "Timeout (ms) para capturar download por ID"
+        required: false
+        default: "8000"
+      goto_timeout_ms:
+        description: "Timeout (ms) do page.goto por ID"
+        required: false
+        default: "12000"
+      request_delay_ms:
+        description: "Atraso (ms) entre IDs"
+        required: false
+        default: "100"
 
 jobs:
   download:
@@ -59,6 +71,9 @@ jobs:
         env:
           START_ID: ${{ inputs.start_id }}
           END_ID: ${{ inputs.end_id }}
+          DOWNLOAD_TIMEOUT_MS: ${{ inputs.download_timeout_ms }}
+          GOTO_TIMEOUT_MS: ${{ inputs.goto_timeout_ms }}
+          REQUEST_DELAY_MS: ${{ inputs.request_delay_ms }}
         run: python -u download.py
 
       - name: Upload ZIPs
