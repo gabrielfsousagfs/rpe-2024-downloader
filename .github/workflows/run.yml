@@ -1,4 +1,4 @@
-name: Baixar RPE 2024
+name: Baixar RPE 2024 Completo
 
 on:
   workflow_dispatch:
@@ -7,25 +7,17 @@ jobs:
   download:
     runs-on: ubuntu-latest
 
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.42.0-jammy
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          pip install playwright
-          playwright install --with-deps
-
-      - name: Run script
+      - name: Run download script
         run: python download.py
 
-      - name: Upload ZIP
+      - name: Upload ZIPs
         uses: actions/upload-artifact@v4
         with:
-          name: RPE_2024
-          path: "*.zip"
+          name: RPE_2024_ZIPs
+          path: pdfs_rpe_2024/*.zip

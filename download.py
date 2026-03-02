@@ -3,53 +3,79 @@ import os
 import zipfile
 from playwright.async_api import async_playwright
 
-START_ID = 0000
-END_ID = 499  # teste curto
-SAVE_FOLDER = "pdfs_rpe_2024"
-ZIP_NAME = "RPE_2024_0000_0499.zip"
-
+# =========================
+# CONFIGURAÇÃO GLOBAL
+# =========================
+START_ID = 0
+END_ID = 9999
+BATCH_SIZE = 500
+SAVE_ROOT = "pdfs_rpe_2024"
 BASE_URL = "https://sistema-registropublicodeemissoesapi.fgv.br/GenerateReport/GenerateInventoryReport/{}/18/true"
 
-os.makedirs(SAVE_FOLDER, exist_ok=True)
+os.makedirs(SAVE_ROOT, exist_ok=True)
 
-async def main():
+
+async def process_batch(p, batch_start, batch_end):
+    print(f"\n========== PROCESSANDO LOTE {batch_start:04d}-{batch_end:04d} ==========")
+
+    browser = await p.chromium.launch(headless=True)
+    context = await browser.new_context(accept_downloads=True)
+    page = await context.new_page()
+
+    batch_folder = os.path.join(SAVE_ROOT, f"{batch_start:04d}_{batch_end:04d}")
+    os.makedirs(batch_folder, exist_ok=True)
+
     download_count = 0
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(accept_downloads=True)
-        page = await context.new_page()
-        print("Iniciando loop for")
+    for participant_id in range(batch_start, batch_end + 1):
+        formatted_id = f"{participant_id:04d}"
+        url = BASE_URL.format(formatted_id)
 
-        for participant_id in range(START_ID, END_ID + 1):
-            formatted_id = f"{participant_id:04d}"
-            url = BASE_URL.format(formatted_id)
+        try:
+            print(f"Tentando {formatted_id}")
 
-            try:
-                print(f"Tentando {formatted_id}")
+            async with page.expect_download(timeout=10000) as download_info:
+                await page.goto(url)
 
-                async with page.expect_download(timeout=10000) as download_info:
-                    await page.goto(url)
+            download = await download_info.value
+            path = os.path.join(batch_folder, f"{formatted_id}.pdf")
+            await download.save_as(path)
 
-                download = await download_info.value
-                path = os.path.join(SAVE_FOLDER, f"{formatted_id}.pdf")
-                await download.save_as(path)
+            download_count += 1
+            print(f"✔ PDF salvo {formatted_id}")
 
-                download_count += 1
-                print(f"✔ PDF salvo {formatted_id}")
+        except Exception:
+            print(f"✖ Não encontrado {formatted_id}")
 
-            except Exception as e:
-                print(f"✖ Falhou {formatted_id}")
+        await asyncio.sleep(1)
 
-        await browser.close()
+    await browser.close()
 
     if download_count > 0:
-        with zipfile.ZipFile(ZIP_NAME, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for file in os.listdir(SAVE_FOLDER):
-                zipf.write(os.path.join(SAVE_FOLDER, file), file)
+        zip_name = f"RPE_2024_{batch_start:04d}_{batch_end:04d}.zip"
+        zip_path = os.path.join(SAVE_ROOT, zip_name)
 
-    print("===================================")
-    print(f"Total de PDFs baixados: {download_count}")
-    print("===================================")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file in os.listdir(batch_folder):
+                zipf.write(os.path.join(batch_folder, file), file)
+
+        print(f"ZIP criado: {zip_name}")
+    else:
+        print("Nenhum PDF neste lote.")
+
+    print(f"Total no lote: {download_count}")
+    print("====================================================")
+
+
+async def main():
+    print("INICIANDO VARREDURA COMPLETA 0000–9999\n")
+
+    async with async_playwright() as p:
+        for batch_start in range(START_ID, END_ID + 1, BATCH_SIZE):
+            batch_end = min(batch_start + BATCH_SIZE - 1, END_ID)
+            await process_batch(p, batch_start, batch_end)
+
+    print("\nVARREDURA FINALIZADA.")
+
 
 asyncio.run(main())
